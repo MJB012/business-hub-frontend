@@ -1,5 +1,9 @@
-const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3000';
+const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined' && (window as any).__ENV__?.VITE_API_BASE_URL) {
+    return (window as any).__ENV__.VITE_API_BASE_URL;
+  }
+  return (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3004';
+};
 
 export interface RequestOptions extends RequestInit {
   data?: any;
@@ -9,7 +13,8 @@ export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const token = localStorage.getItem('token');
 
   const headers: Record<string, string> = {
