@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -8,11 +9,13 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  emptyState?: React.ReactNode;
 }
 
 export default function DataTable<TData, TValue>({
   columns,
   data,
+  emptyState,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -24,13 +27,13 @@ export default function DataTable<TData, TValue>({
     <div className="overflow-x-auto w-full">
       <table className="w-full">
         {/* Table Header */}
-        <thead className="bg-gray-50 border-b border-gray-200">
+        <thead className="bg-white border-b border-gray-100">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="text-left px-2 py-2 text-sm font-medium text-black"
+                  className="text-left px-4 py-3.5 text-sm font-semibold text-gray-900"
                 >
                   {header.isPlaceholder
                     ? null
@@ -50,10 +53,10 @@ export default function DataTable<TData, TValue>({
             table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                className="border-b border-gray-200 hover:bg-gray-50 transition"
+                className="border-b border-gray-100 hover:bg-gray-50/75 transition-colors"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-2 py-2 text-sm text-gray-900">
+                  <td key={cell.id} className="px-4 py-3.5 text-sm text-gray-900">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -63,9 +66,13 @@ export default function DataTable<TData, TValue>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="h-24 text-center text-gray-500"
+                className="p-0 text-center text-gray-500"
               >
-                No results.
+                {emptyState || (
+                  <div className="h-24 flex items-center justify-center text-sm">
+                    No results.
+                  </div>
+                )}
               </td>
             </tr>
           )}

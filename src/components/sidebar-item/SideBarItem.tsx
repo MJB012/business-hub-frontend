@@ -1,27 +1,34 @@
-import React from "react";
+import type { FC, ReactNode } from 'react';
 
 interface SidebarItemProps {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   active?: boolean;
 }
 
-export function SidebarItem({
+export const SidebarItem: FC<SidebarItemProps> = ({
   icon,
   label,
   active = false,
-}: SidebarItemProps) {
+}) => {
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer
-      ${
+      className={`group flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl cursor-pointer text-sm font-medium transition-colors select-none ${
         active
-          ? "bg-black text-white"
-          : "text-gray-700 hover:bg-gray-100"
+          ? 'bg-black text-white'
+          : 'text-gray-800 hover:bg-gray-100/80 hover:text-gray-900'
       }`}
     >
-      {icon}
-      <span>{label}</span>
+      <span
+        className={`flex items-center justify-center shrink-0 ${
+          active ? 'text-white' : 'text-gray-800 group-hover:text-gray-900'
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="truncate">{label}</span>
     </div>
   );
-}
+};
+
+export default SidebarItem;

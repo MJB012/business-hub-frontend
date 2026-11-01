@@ -1,7 +1,7 @@
 import React from "react";
 interface StatCardProps {
     title: string;
-    value: string;
+    value: string | number;
     subtitle?: string;
     icon?: React.ReactNode;
     negative?: boolean;
