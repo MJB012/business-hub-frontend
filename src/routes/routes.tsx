@@ -10,6 +10,10 @@ import {
   Users,
   Settings as SettingsIcon,
   ShieldCheck,
+  Store,
+  BarChart2,
+  BarChart3,
+  FileText,
 } from 'lucide-react';
 import { RouteNames } from './RouteNames';
 import Layout from '../components/layout/Layout';
@@ -18,6 +22,8 @@ import Category from '../pages/category/Category';
 import Supplier from '../pages/supplier/Supplier';
 import Inventory from '../pages/inventory/Inventory';
 import Sales from '../pages/sales/Sales';
+import Expenses from '../pages/expenses/Expenses';
+import Reports from '../pages/reports/Reports';
 import Settings from '../pages/settings/Settings';
 import SuperAdminDashboard from '../pages/super-admin/SuperAdminDashboard';
 import Login from '../pages/login/Login';
@@ -80,12 +86,14 @@ export const sidebarRoutes: AppRoute[] = [
     path: RouteNames.EXPENSES,
     label: 'Expenses',
     icon: <Receipt size={18} strokeWidth={2} />,
-    element: (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold">Expenses</h1>
-        <p className="text-gray-500 mt-1">Track operating expenses, receipts, and costs</p>
-      </div>
-    ),
+    element: <Expenses />,
+    showInSidebar: true,
+  },
+  {
+    path: RouteNames.REPORTS,
+    label: 'Reports',
+    icon: <BarChart3 size={18} strokeWidth={2} />,
+    element: <Reports />,
     showInSidebar: true,
   },
   {
@@ -112,6 +120,46 @@ export const sidebarRoutes: AppRoute[] = [
     label: 'Platform Businesses',
     icon: <ShieldCheck size={18} strokeWidth={2} />,
     element: <SuperAdminDashboard />,
+    showInSidebar: false,
+    superAdminOnly: true,
+  },
+  {
+    path: RouteNames.ADMIN_BUSINESSES,
+    label: 'Businesses',
+    icon: <Store size={18} strokeWidth={2} />,
+    element: <SuperAdminDashboard initialView="businesses" />,
+    showInSidebar: false,
+    superAdminOnly: true,
+  },
+  {
+    path: RouteNames.ADMIN_USERS,
+    label: 'User Management',
+    icon: <Users size={18} strokeWidth={2} />,
+    element: <SuperAdminDashboard initialView="users" />,
+    showInSidebar: false,
+    superAdminOnly: true,
+  },
+  {
+    path: RouteNames.ADMIN_ANALYTICS,
+    label: 'Analytics',
+    icon: <BarChart2 size={18} strokeWidth={2} />,
+    element: <SuperAdminDashboard initialView="analytics" />,
+    showInSidebar: false,
+    superAdminOnly: true,
+  },
+  {
+    path: RouteNames.ADMIN_AUDIT_LOGS,
+    label: 'Audit Logs',
+    icon: <FileText size={18} strokeWidth={2} />,
+    element: <SuperAdminDashboard initialView="audit_logs" />,
+    showInSidebar: false,
+    superAdminOnly: true,
+  },
+  {
+    path: RouteNames.ADMIN_SETTINGS,
+    label: 'Platform Settings',
+    icon: <SettingsIcon size={18} strokeWidth={2} />,
+    element: <SuperAdminDashboard initialView="settings" />,
     showInSidebar: false,
     superAdminOnly: true,
   },

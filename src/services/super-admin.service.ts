@@ -3,10 +3,13 @@ import { apiRequest } from './api.config';
 export interface PlatformStats {
   total_businesses: number;
   active_businesses: number;
+  pending_businesses?: number;
   blocked_businesses: number;
+  inactive_businesses?: number;
   total_products: number;
   total_orders: number;
   total_revenue: number;
+  total_users?: number;
 }
 
 export interface BusinessOwner {
@@ -20,7 +23,7 @@ export interface RegisteredBusiness {
   _id: string;
   name: string;
   type: string;
-  status: 'active' | 'blocked';
+  status: 'active' | 'blocked' | 'suspended' | 'pending' | 'inactive';
   logo?: string | null;
   contact_email?: string;
   contact_phone?: string;
@@ -50,7 +53,26 @@ export interface BusinessStatsDetails extends RegisteredBusiness {
   sales: any[];
 }
 
+export interface PlatformUser {
+  id: string;
+  initials?: string;
+  full_name: string;
+  email: string;
+  business_name?: string;
+  role: string;
+  status: 'Active' | 'Suspended' | 'Inactive';
+  last_login?: string;
+  joined?: string;
+  createdAt?: string;
+}
+
 export const superAdminService = {
+  async getUsers(): Promise<PlatformUser[]> {
+    return apiRequest<PlatformUser[]>('/super-admin/users', {
+      method: 'GET',
+    });
+  },
+
   async getStats(): Promise<PlatformStats> {
     return apiRequest<PlatformStats>('/super-admin/stats', {
       method: 'GET',
@@ -71,7 +93,7 @@ export const superAdminService = {
 
   async updateBusinessStatus(
     id: string,
-    status: 'active' | 'blocked',
+    status: 'active' | 'blocked' | 'suspended' | 'pending' | 'inactive',
     reason?: string,
   ): Promise<RegisteredBusiness> {
     return apiRequest<RegisteredBusiness>(`/super-admin/businesses/${id}/status`, {

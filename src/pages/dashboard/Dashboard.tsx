@@ -3,14 +3,17 @@ import {
   DollarSign,
   TrendingUp,
   Box,
+  Receipt,
 } from "lucide-react";
 
 import { StatCard } from "../../components/stat-card/StatCard";
 import { BaseCard } from "../../components/base-card/BaseCard";
 import { saleService } from "../../services/sale.service";
 import { productService } from "../../services/product.service";
+import { expenseService } from "../../services/expense.service";
 import { SaleEntity } from "../../components/entities/sale.entity";
 import { ProductEntity } from "../../components/entities/product.entity";
+import { ExpenseEntity } from "../../components/entities/expense.entity";
 import { useCurrency } from "../../services/currency.service";
 import SuperAdminDashboard from "../super-admin/SuperAdminDashboard";
 import { UserRoleEnum } from "../../enums/UserRoleEnum";
@@ -37,6 +40,7 @@ export default function Dashboard() {
   const currencySymbol = useCurrency();
   const [sales, setSales] = useState<SaleEntity[]>([]);
   const [products, setProducts] = useState<ProductEntity[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseEntity[]>([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -56,6 +60,15 @@ export default function Dashboard() {
         }
       } catch (err) {
         console.warn('Backend products fetch failed:', err);
+      }
+
+      try {
+        const expData = await expenseService.getExpenses();
+        if (Array.isArray(expData)) {
+          setExpenses(expData);
+        }
+      } catch (err) {
+        console.warn('Backend expenses fetch failed:', err);
       }
     };
 
@@ -102,6 +115,17 @@ export default function Dashboard() {
     0
   );
 
+  const totalExpenses = expenses.reduce(
+    (sum, e) => sum + (Number(e.amount) || 0),
+    0
+  );
+  const todayExpenses = expenses
+    .filter((e) => e.date && e.date.startsWith(todayStr))
+    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+  const netProfit = totalSales - totalExpenses;
+  const todayNetProfit = todayTotal - todayExpenses;
+
   const inventoryValue = products.reduce(
     (sum, p) => sum + Number(p.quantity || 0) * Number(p.price || 0),
     0
@@ -123,13 +147,25 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Top Stat Cards - 1 col on mobile, 2 cols on tablet, 4 cols on desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Top Stat Cards - 5 cards layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
         <StatCard
           title="Total Sales"
           value={`${currencySymbol}${totalSales.toFixed(2)}`}
           subtitle={`${currencySymbol}${todayTotal.toFixed(2)} today`}
           icon={<DollarSign />}
+        />
+        <StatCard
+          title="Total Expenses"
+          value={`${currencySymbol}${totalExpenses.toFixed(2)}`}
+          subtitle={`${currencySymbol}${todayExpenses.toFixed(2)} today`}
+          icon={<Receipt />}
+        />
+        <StatCard
+          title="Net Profit"
+          value={`${currencySymbol}${netProfit.toFixed(2)}`}
+          subtitle={`${currencySymbol}${todayNetProfit.toFixed(2)} today`}
+          icon={<TrendingUp />}
         />
         <StatCard
           title="Total Orders"
@@ -138,25 +174,19 @@ export default function Dashboard() {
           icon={<TrendingUp />}
         />
         <StatCard
-          title="Active Products"
-          value={products.length}
-          subtitle={`${lowStockProducts.length} low stock`}
-          icon={<Box />}
-        />
-        <StatCard
           title="Inventory Value"
           value={`${currencySymbol}${inventoryValue.toFixed(2)}`}
-          subtitle={`${products.reduce((acc, p) => acc + Number(p.quantity || 0), 0)} items in stock`}
+          subtitle={`${lowStockProducts.length} low stock items`}
           icon={<Box />}
         />
       </div>
 
-      {/* Bottom Cards - 1 col on mobile/tablet, 2 cols on large screens */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      {/* Bottom Cards - 1 col on mobile/tablet, 3 cols on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Recent Sales */}
         <BaseCard title="Recent Sales" subtitle="Latest transactions">
           <div className="space-y-4">
-            {sales.slice(0, 3).map((sale, idx) => (
+            {sales.slice(0, 4).map((sale, idx) => (
               <div
                 key={sale._id || sale.id || idx}
                 className="flex justify-between items-start sm:items-center"
@@ -185,13 +215,45 @@ export default function Dashboard() {
           </div>
         </BaseCard>
 
+        {/* Recent Expenses */}
+        <BaseCard title="Recent Expenses" subtitle="Latest recorded costs">
+          <div className="space-y-4">
+            {expenses.slice(0, 4).map((exp, idx) => (
+              <div
+                key={exp._id || exp.id || idx}
+                className="flex justify-between items-start sm:items-center"
+              >
+                <div>
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">
+                    {exp.description}
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    {exp.date || 'Today'} · {exp.category || 'General'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-gray-900 text-sm sm:text-base">
+                    {currencySymbol}{Number(exp.amount || 0).toFixed(2)}
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    {exp.payment_method || 'Cash'}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {expenses.length === 0 && (
+              <p className="text-sm text-gray-500 py-2">No expenses recorded yet.</p>
+            )}
+          </div>
+        </BaseCard>
+
         {/* Inventory Alerts */}
         <BaseCard
           title="Inventory Alerts"
           subtitle="Items that need attention"
         >
           <div className="space-y-4">
-            {lowStockProducts.slice(0, 3).map((prod, idx) => (
+            {lowStockProducts.slice(0, 4).map((prod, idx) => (
               <div
                 key={prod._id || prod.id || idx}
                 className="flex justify-between items-center gap-2"

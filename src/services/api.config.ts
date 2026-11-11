@@ -1,8 +1,19 @@
-const getApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined' && (window as any).__ENV__?.VITE_API_BASE_URL) {
-    return (window as any).__ENV__.VITE_API_BASE_URL;
+const formatApiUrl = (rawUrl?: string): string => {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  let url = rawUrl.trim();
+  if (!url) return '';
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `http://${url}`;
   }
-  return (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3004';
+  return url.replace(/\/+$/, '');
+};
+
+const getApiBaseUrl = (): string => {
+  const envUrl =
+    (typeof window !== 'undefined' && (window as any).__ENV__?.VITE_API_BASE_URL) ||
+    (import.meta as any).env?.VITE_API_BASE_URL ||
+    '';
+  return formatApiUrl(envUrl);
 };
 
 export interface RequestOptions extends RequestInit {

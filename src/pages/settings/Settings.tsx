@@ -16,6 +16,7 @@ import { UserRoleEnum } from '../../enums/UserRoleEnum';
 import { ShopSettingsEntity } from '../../components/entities/shop_settings.entity';
 import { businessService } from '../../services/business.service';
 import { setStoredCurrency } from '../../services/currency.service';
+import SuperAdminDashboard from '../super-admin/SuperAdminDashboard';
 
 const DEFAULT_SETTINGS = new ShopSettingsEntity();
 
@@ -321,6 +322,10 @@ export default function Settings() {
     setGeneralSuccess(true);
     setTimeout(() => setGeneralSuccess(false), 3000);
   };
+
+  if (isSuperAdmin) {
+    return <SuperAdminDashboard initialView="settings" />;
+  }
 
   return (
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-5xl">

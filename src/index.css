@@ -20,12 +20,59 @@ body {
   box-sizing: border-box;
 }
 
+/* Print utility classes */
+.print-only {
+  display: none !important;
+}
+
 @media print {
-  body * {
+  @page {
+    size: auto;
+    margin: 10mm 12mm;
+  }
+
+  /* Preserve colors, badges, backgrounds and graphics when printing/saving to PDF */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide interactive controls, sidebars, headers, and action buttons */
+  .no-print,
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  html,
+  body,
+  #root,
+  #root > div,
+  main {
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* When an invoice modal is open and being printed */
+  body:has(#printable-invoice) * {
     visibility: hidden;
   }
-  #printable-invoice,
-  #printable-invoice * {
+  body:has(#printable-invoice) #printable-invoice,
+  body:has(#printable-invoice) #printable-invoice * {
     visibility: visible;
   }
   #printable-invoice {
@@ -39,7 +86,31 @@ body {
     box-shadow: none !important;
     border: none !important;
   }
-  .no-print {
-    display: none !important;
+
+  /* When printing the report page */
+  #printable-report {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  #printable-report,
+  #printable-report * {
+    visibility: visible !important;
+  }
+
+  /* Prevent page-breaks in the middle of table rows and cards */
+  tr,
+  .print-avoid-break,
+  .rounded-2xl {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group;
   }
 }

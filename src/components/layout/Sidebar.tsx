@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SidebarItem } from '../sidebar-item/SideBarItem';
-import { Store, LogOut, X, ShieldAlert } from 'lucide-react';
+import {
+  Store,
+  LogOut,
+  X,
+  Shield,
+  LayoutGrid,
+  Users,
+  BarChart2,
+  FileText,
+  Settings,
+} from 'lucide-react';
 import { sidebarRoutes } from '../../routes/routes';
 import { RouteNames } from '../../routes/RouteNames';
 import { UserRoleEnum } from '../../enums/UserRoleEnum';
@@ -132,26 +142,57 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
     currentUser.role === UserRoleEnum.SUPER_ADMIN ||
     currentUser.role === 'super_admin';
 
+  // Super Admin sidebar items matching exact design
+  const superAdminRoutes = [
+    {
+      path: RouteNames.DASHBOARD,
+      label: 'Dashboard',
+      icon: <LayoutGrid size={18} strokeWidth={2} />,
+    },
+    {
+      path: RouteNames.ADMIN_BUSINESSES,
+      label: 'Businesses',
+      icon: <Store size={18} strokeWidth={2} />,
+    },
+    {
+      path: RouteNames.ADMIN_USERS,
+      label: 'User Management',
+      icon: <Users size={18} strokeWidth={2} />,
+    },
+    {
+      path: RouteNames.ADMIN_ANALYTICS,
+      label: 'Analytics',
+      icon: <BarChart2 size={18} strokeWidth={2} />,
+    },
+    {
+      path: RouteNames.ADMIN_AUDIT_LOGS,
+      label: 'Audit Logs',
+      icon: <FileText size={18} strokeWidth={2} />,
+    },
+    {
+      path: RouteNames.SETTINGS,
+      label: 'Settings',
+      icon: <Settings size={18} strokeWidth={2} />,
+    },
+  ];
+
   // Only render routes configured to show in sidebar
-  const visibleRoutes = sidebarRoutes.filter((route) => {
-    if (route.showInSidebar === false) return false;
-    // Super Admin only needs the Dashboard (where all businesses and stats are managed)
-    if (isSuperAdmin) {
-      return route.path === RouteNames.DASHBOARD;
-    }
-    // Store owners see normal shop management routes (Categories, Suppliers, Inventory, Sales, Expenses, Settings)
-    if (route.superAdminOnly) return false;
-    return true;
-  });
+  const visibleRoutes = isSuperAdmin
+    ? superAdminRoutes
+    : sidebarRoutes.filter((route) => {
+        if (route.showInSidebar === false) return false;
+        if (route.superAdminOnly) return false;
+        return true;
+      });
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
       {/* Brand Header */}
       <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
             {isSuperAdmin ? (
-              <ShieldAlert className="text-white" size={20} />
+              <Shield className="text-white" size={20} />
             ) : currentUser.logo ? (
               <img
                 src={currentUser.logo}
@@ -167,7 +208,7 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
               Business Hub
             </span>
             <span className="text-xs text-gray-500 font-normal leading-tight mt-0.5 truncate">
-              {isSuperAdmin ? 'Super Admin Portal' : currentUser.businessName}
+              {isSuperAdmin ? 'Admin Panel' : currentUser.businessName}
             </span>
           </div>
         </div>
@@ -191,7 +232,12 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
             <SidebarItem
               icon={route.icon}
               label={route.label}
-              active={location.pathname === route.path}
+              active={
+                location.pathname === route.path ||
+                (route.path === RouteNames.DASHBOARD && location.pathname === RouteNames.SUPER_ADMIN) ||
+                (route.path === RouteNames.SETTINGS && location.pathname === RouteNames.ADMIN_SETTINGS) ||
+                (route.path === RouteNames.ADMIN_SETTINGS && location.pathname === RouteNames.SETTINGS)
+              }
             />
           </div>
         ))}
@@ -201,14 +247,20 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
       <div className="p-4 border-t border-gray-200">
         {/* User Info */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-700 shrink-0">
-            {getInitials(currentUser.name)}
+          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-700 shrink-0">
+            {isSuperAdmin ? 'SA' : getInitials(currentUser.name)}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-gray-900 leading-tight truncate">
-              {currentUser.name}
+            <span className="text-sm font-bold text-gray-900 leading-tight truncate">
+              {isSuperAdmin ? 'Super Admin' : currentUser.name}
             </span>
-            <span className="bg-gray-100 text-gray-700 text-[11px] font-medium px-2 py-0.5 rounded inline-block w-fit mt-1 leading-none">
+            <span
+              className={`${
+                isSuperAdmin
+                  ? 'bg-black text-white text-[10px] font-semibold px-2 py-0.5 rounded-full'
+                  : 'bg-gray-100 text-gray-700 text-[11px] font-medium px-2 py-0.5 rounded'
+              } inline-block w-fit mt-1 leading-tight`}
+            >
               {currentUser.role}
             </span>
             <span className="text-xs text-gray-400 mt-1 leading-tight truncate">
@@ -222,7 +274,7 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-2.5 text-red-600 hover:text-red-700 text-sm font-medium transition-colors cursor-pointer w-fit"
+            className="flex items-center gap-2 text-red-600 hover:text-red-700 text-sm font-semibold transition-colors cursor-pointer w-fit"
           >
             <LogOut size={16} className="text-red-600" />
             <span>Logout</span>

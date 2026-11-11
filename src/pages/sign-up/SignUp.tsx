@@ -36,7 +36,11 @@ const SignUp = () => {
         await authService.signup(values);
         navigate(RouteNames.LOGIN);
       } catch (error: any) {
-        setErrorMessage(error.message || 'Registration failed');
+        const msg = error.message || 'Registration failed';
+        if (msg.toLowerCase().includes('business')) {
+          formik.setFieldError('business_name', msg);
+        }
+        setErrorMessage(msg);
       } finally {
         setSubmitting(false);
       }
