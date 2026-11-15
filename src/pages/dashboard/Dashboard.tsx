@@ -17,6 +17,11 @@ import { ExpenseEntity } from "../../components/entities/expense.entity";
 import { useCurrency } from "../../services/currency.service";
 import SuperAdminDashboard from "../super-admin/SuperAdminDashboard";
 import { UserRoleEnum } from "../../enums/UserRoleEnum";
+import {
+  hasAnyPermission,
+  getStoredUser,
+  isAdminOrSuperAdmin,
+} from "../../utils/permissions";
 
 export default function Dashboard() {
   // If Super Admin, render the platform Super Admin Dashboard directly
@@ -37,6 +42,14 @@ export default function Dashboard() {
     return <SuperAdminDashboard />;
   }
 
+  const currentUser = getStoredUser();
+  const isOwner = isAdminOrSuperAdmin(currentUser?.role);
+
+  const canViewSales = isOwner || hasAnyPermission(['sales:view', 'sales:create'], currentUser);
+  const canViewInventory = isOwner || hasAnyPermission(['inventory:view', 'inventory:manage'], currentUser);
+  const canViewExpenses = isOwner || hasAnyPermission(['expenses:view', 'expenses:manage'], currentUser);
+  const canViewProfit = isOwner || (canViewSales && canViewExpenses);
+
   const currencySymbol = useCurrency();
   const [sales, setSales] = useState<SaleEntity[]>([]);
   const [products, setProducts] = useState<ProductEntity[]>([]);
@@ -44,36 +57,42 @@ export default function Dashboard() {
 
   useEffect(() => {
     const loadDashboardData = async () => {
-      try {
-        const salesData = await saleService.getSales();
-        if (Array.isArray(salesData)) {
-          setSales(salesData);
+      if (canViewSales) {
+        try {
+          const salesData = await saleService.getSales();
+          if (Array.isArray(salesData)) {
+            setSales(salesData);
+          }
+        } catch (err) {
+          console.warn('Backend sales fetch failed:', err);
         }
-      } catch (err) {
-        console.warn('Backend sales fetch failed:', err);
       }
 
-      try {
-        const prodsData = await productService.getProducts();
-        if (Array.isArray(prodsData)) {
-          setProducts(prodsData);
+      if (canViewInventory) {
+        try {
+          const prodsData = await productService.getProducts();
+          if (Array.isArray(prodsData)) {
+            setProducts(prodsData);
+          }
+        } catch (err) {
+          console.warn('Backend products fetch failed:', err);
         }
-      } catch (err) {
-        console.warn('Backend products fetch failed:', err);
       }
 
-      try {
-        const expData = await expenseService.getExpenses();
-        if (Array.isArray(expData)) {
-          setExpenses(expData);
+      if (canViewExpenses) {
+        try {
+          const expData = await expenseService.getExpenses();
+          if (Array.isArray(expData)) {
+            setExpenses(expData);
+          }
+        } catch (err) {
+          console.warn('Backend expenses fetch failed:', err);
         }
-      } catch (err) {
-        console.warn('Backend expenses fetch failed:', err);
       }
     };
 
     loadDashboardData();
-  }, []);
+  }, [canViewSales, canViewInventory, canViewExpenses]);
 
   const getUserInfo = () => {
     try {
@@ -147,135 +166,159 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Top Stat Cards - 5 cards layout */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
-        <StatCard
-          title="Total Sales"
-          value={`${currencySymbol}${totalSales.toFixed(2)}`}
-          subtitle={`${currencySymbol}${todayTotal.toFixed(2)} today`}
-          icon={<DollarSign />}
-        />
-        <StatCard
-          title="Total Expenses"
-          value={`${currencySymbol}${totalExpenses.toFixed(2)}`}
-          subtitle={`${currencySymbol}${todayExpenses.toFixed(2)} today`}
-          icon={<Receipt />}
-        />
-        <StatCard
-          title="Net Profit"
-          value={`${currencySymbol}${netProfit.toFixed(2)}`}
-          subtitle={`${currencySymbol}${todayNetProfit.toFixed(2)} today`}
-          icon={<TrendingUp />}
-        />
-        <StatCard
-          title="Total Orders"
-          value={sales.length}
-          subtitle={`${todaySales.length} orders today`}
-          icon={<TrendingUp />}
-        />
-        <StatCard
-          title="Inventory Value"
-          value={`${currencySymbol}${inventoryValue.toFixed(2)}`}
-          subtitle={`${lowStockProducts.length} low stock items`}
-          icon={<Box />}
-        />
+      {/* Top Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
+        {canViewSales && (
+          <StatCard
+            title="Total Sales"
+            value={`${currencySymbol}${totalSales.toFixed(2)}`}
+            subtitle={`${currencySymbol}${todayTotal.toFixed(2)} today`}
+            icon={<DollarSign />}
+          />
+        )}
+        {canViewExpenses && (
+          <StatCard
+            title="Total Expenses"
+            value={`${currencySymbol}${totalExpenses.toFixed(2)}`}
+            subtitle={`${currencySymbol}${todayExpenses.toFixed(2)} today`}
+            icon={<Receipt />}
+          />
+        )}
+        {canViewProfit && (
+          <StatCard
+            title="Net Profit"
+            value={`${currencySymbol}${netProfit.toFixed(2)}`}
+            subtitle={`${currencySymbol}${todayNetProfit.toFixed(2)} today`}
+            icon={<TrendingUp />}
+          />
+        )}
+        {canViewSales && (
+          <StatCard
+            title="Total Orders"
+            value={sales.length}
+            subtitle={`${todaySales.length} orders today`}
+            icon={<TrendingUp />}
+          />
+        )}
+        {canViewInventory && (
+          <StatCard
+            title="Inventory Value"
+            value={`${currencySymbol}${inventoryValue.toFixed(2)}`}
+            subtitle={`${lowStockProducts.length} low stock items`}
+            icon={<Box />}
+          />
+        )}
       </div>
 
-      {/* Bottom Cards - 1 col on mobile/tablet, 3 cols on large screens */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* Bottom Cards */}
+      <div
+        className={`grid grid-cols-1 ${
+          (canViewSales ? 1 : 0) + (canViewExpenses ? 1 : 0) + (canViewInventory ? 1 : 0) === 2
+            ? 'lg:grid-cols-2'
+            : (canViewSales ? 1 : 0) + (canViewExpenses ? 1 : 0) + (canViewInventory ? 1 : 0) === 1
+            ? 'lg:grid-cols-1'
+            : 'lg:grid-cols-3'
+        } gap-4 sm:gap-6`}
+      >
         {/* Recent Sales */}
-        <BaseCard title="Recent Sales" subtitle="Latest transactions">
-          <div className="space-y-4">
-            {sales.slice(0, 4).map((sale, idx) => (
-              <div
-                key={sale._id || sale.id || idx}
-                className="flex justify-between items-start sm:items-center"
-              >
-                <div>
-                  <p className="font-medium text-gray-900 text-sm sm:text-base">
-                    {sale.product_name}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    {sale.date ? sale.date.split('T')[0] : 'Today'} · {sale.payment_method || 'Cash'}
-                  </p>
+        {canViewSales && (
+          <BaseCard title="Recent Sales" subtitle="Latest transactions">
+            <div className="space-y-4">
+              {sales.slice(0, 4).map((sale, idx) => (
+                <div
+                  key={sale._id || sale.id || idx}
+                  className="flex justify-between items-start sm:items-center"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm sm:text-base">
+                      {sale.product_name}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      {sale.date ? sale.date.split('T')[0] : 'Today'} · {sale.payment_method || 'Cash'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900 text-sm sm:text-base">
+                      {currencySymbol}{(Number(sale.quantity || 1) * Number(sale.unit_price || 0)).toFixed(2)}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      Qty: {sale.quantity || 1}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900 text-sm sm:text-base">
-                    {currencySymbol}{(Number(sale.quantity || 1) * Number(sale.unit_price || 0)).toFixed(2)}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    Qty: {sale.quantity || 1}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {sales.length === 0 && (
-              <p className="text-sm text-gray-500 py-2">No transactions recorded yet.</p>
-            )}
-          </div>
-        </BaseCard>
+              ))}
+              {sales.length === 0 && (
+                <p className="text-sm text-gray-500 py-2">No transactions recorded yet.</p>
+              )}
+            </div>
+          </BaseCard>
+        )}
 
         {/* Recent Expenses */}
-        <BaseCard title="Recent Expenses" subtitle="Latest recorded costs">
-          <div className="space-y-4">
-            {expenses.slice(0, 4).map((exp, idx) => (
-              <div
-                key={exp._id || exp.id || idx}
-                className="flex justify-between items-start sm:items-center"
-              >
-                <div>
-                  <p className="font-medium text-gray-900 text-sm sm:text-base">
-                    {exp.description}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    {exp.date || 'Today'} · {exp.category || 'General'}
-                  </p>
+        {canViewExpenses && (
+          <BaseCard title="Recent Expenses" subtitle="Latest recorded costs">
+            <div className="space-y-4">
+              {expenses.slice(0, 4).map((exp, idx) => (
+                <div
+                  key={exp._id || exp.id || idx}
+                  className="flex justify-between items-start sm:items-center"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm sm:text-base">
+                      {exp.description}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      {exp.date || 'Today'} · {exp.category || 'General'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900 text-sm sm:text-base">
+                      {currencySymbol}{Number(exp.amount || 0).toFixed(2)}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      {exp.payment_method || 'Cash'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900 text-sm sm:text-base">
-                    {currencySymbol}{Number(exp.amount || 0).toFixed(2)}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    {exp.payment_method || 'Cash'}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {expenses.length === 0 && (
-              <p className="text-sm text-gray-500 py-2">No expenses recorded yet.</p>
-            )}
-          </div>
-        </BaseCard>
+              ))}
+              {expenses.length === 0 && (
+                <p className="text-sm text-gray-500 py-2">No expenses recorded yet.</p>
+              )}
+            </div>
+          </BaseCard>
+        )}
 
         {/* Inventory Alerts */}
-        <BaseCard
-          title="Inventory Alerts"
-          subtitle="Items that need attention"
-        >
-          <div className="space-y-4">
-            {lowStockProducts.slice(0, 4).map((prod, idx) => (
-              <div
-                key={prod._id || prod.id || idx}
-                className="flex justify-between items-center gap-2"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
-                    {prod.name}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500 truncate">
-                    {prod.sku ? `SKU: ${prod.sku} · ` : ''}Threshold: {prod.low_stock_threshold || 10}
-                  </p>
+        {canViewInventory && (
+          <BaseCard
+            title="Inventory Alerts"
+            subtitle="Items that need attention"
+          >
+            <div className="space-y-4">
+              {lowStockProducts.slice(0, 4).map((prod, idx) => (
+                <div
+                  key={prod._id || prod.id || idx}
+                  className="flex justify-between items-center gap-2"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                      {prod.name}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">
+                      {prod.sku ? `SKU: ${prod.sku} · ` : ''}Threshold: {prod.low_stock_threshold || 10}
+                    </p>
+                  </div>
+                  <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full text-xs sm:text-sm shrink-0 font-medium">
+                    {prod.quantity || 0} left
+                  </span>
                 </div>
-                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full text-xs sm:text-sm shrink-0 font-medium">
-                  {prod.quantity || 0} left
-                </span>
-              </div>
-            ))}
-            {lowStockProducts.length === 0 && (
-              <p className="text-sm text-gray-500 py-2">All stock levels are optimal.</p>
-            )}
-          </div>
-        </BaseCard>
+              ))}
+              {lowStockProducts.length === 0 && (
+                <p className="text-sm text-gray-500 py-2">All stock levels are optimal.</p>
+              )}
+            </div>
+          </BaseCard>
+        )}
       </div>
     </div>
   );

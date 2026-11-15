@@ -10,9 +10,12 @@ import { productService } from '../../services/product.service';
 import { categoryService } from '../../services/category.service';
 import { supplierService } from '../../services/supplier.service';
 import { useCurrency } from '../../services/currency.service';
+import { hasPermission } from '../../utils/permissions';
 
 export default function Inventory() {
   const currencySymbol = useCurrency();
+  const canManageInventory = hasPermission('inventory:manage');
+  const canDeleteInventory = hasPermission('inventory:delete');
   const [products, setProducts] = useState<ProductEntity[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
@@ -246,30 +249,38 @@ export default function Inventory() {
           );
         },
       },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => openEditModal(row.original)}
-              className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-              aria-label="Edit product"
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              onClick={() => handleDeleteClick(row.original)}
-              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-              aria-label="Delete product"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ),
-      },
+      ...(canManageInventory || canDeleteInventory
+        ? [
+            {
+              id: 'actions',
+              header: 'Actions',
+              cell: ({ row }: { row: { original: ProductEntity } }) => (
+                <div className="flex items-center gap-2">
+                  {canManageInventory && (
+                    <button
+                      onClick={() => openEditModal(row.original)}
+                      className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                      aria-label="Edit product"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  )}
+                  {canDeleteInventory && (
+                    <button
+                      onClick={() => handleDeleteClick(row.original)}
+                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      aria-label="Delete product"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              ),
+            },
+          ]
+        : []),
     ],
-    [currencySymbol]
+    [currencySymbol, canManageInventory, canDeleteInventory]
   );
 
   return (
@@ -285,13 +296,15 @@ export default function Inventory() {
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 bg-black text-white hover:bg-gray-800 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-xs cursor-pointer w-full sm:w-auto"
-        >
-          <Plus size={18} />
-          <span>Add Product</span>
-        </button>
+        {canManageInventory && (
+          <button
+            onClick={openAddModal}
+            className="inline-flex items-center justify-center gap-2 bg-black text-white hover:bg-gray-800 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-xs cursor-pointer w-full sm:w-auto"
+          >
+            <Plus size={18} />
+            <span>Add Product</span>
+          </button>
+        )}
       </div>
 
       {/* Search Input */}

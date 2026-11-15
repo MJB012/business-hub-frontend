@@ -18,6 +18,7 @@ import {
 import { reportService } from '../../services/report.service';
 import { categoryService } from '../../services/category.service';
 import { useCurrency } from '../../services/currency.service';
+import { hasPermission } from '../../utils/permissions';
 import type {
   FinancialSummaryReport,
   SalesReport,
@@ -38,6 +39,7 @@ const formatLocalDate = (date: Date): string => {
 
 export default function Reports() {
   const currencySymbol = useCurrency();
+  const canExportReports = hasPermission('reports:export');
 
   // State
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -331,24 +333,28 @@ export default function Reports() {
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs transition cursor-pointer"
-            title="Print or export as PDF"
-          >
-            <Printer size={14} />
-            <span className="hidden sm:inline">Print / PDF</span>
-          </button>
+          {canExportReports && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs transition cursor-pointer"
+                title="Print or export as PDF"
+              >
+                <Printer size={14} />
+                <span className="hidden sm:inline">Print / PDF</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition cursor-pointer"
-          >
-            <Download size={14} />
-            <span>Export CSV</span>
-          </button>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition cursor-pointer"
+              >
+                <Download size={14} />
+                <span>Export CSV</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -37,7 +37,9 @@ const SignUp = () => {
         navigate(RouteNames.LOGIN);
       } catch (error: any) {
         const msg = error.message || 'Registration failed';
-        if (msg.toLowerCase().includes('business')) {
+        if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('role')) {
+          formik.setFieldError('email', msg);
+        } else if (msg.toLowerCase().includes('business')) {
           formik.setFieldError('business_name', msg);
         }
         setErrorMessage(msg);

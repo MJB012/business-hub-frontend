@@ -7,8 +7,10 @@ import DeleteModal from '../../components/delete-modal/DeleteModal';
 import AddCategoryModal from '../../components/add-category-modal/AddCategoryModal';
 import { CategoryEntity } from '../../components/entities/category.entity';
 import { categoryService } from '../../services/category.service';
+import { hasPermission } from '../../utils/permissions';
 
 const Category = () => {
+  const canManageCategories = hasPermission('categories:manage');
   const [categories, setCategories] = useState<CategoryEntity[]>([]);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryEntity | null>(null);
@@ -131,30 +133,34 @@ const Category = () => {
           );
         },
       },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => openEditModal(row.original)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-              aria-label="Edit category"
-            >
-              <Pencil size={18} />
-            </button>
-            <button
-              onClick={() => handleDeleteCategory(row.original)}
-              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-              aria-label="Delete category"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
-        ),
-      },
+      ...(canManageCategories
+        ? [
+            {
+              id: 'actions',
+              header: 'Actions',
+              cell: ({ row }: { row: { original: CategoryEntity } }) => (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEditModal(row.original)}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                    aria-label="Edit category"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(row.original)}
+                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    aria-label="Delete category"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ),
+            },
+          ]
+        : []),
     ],
-    []
+    [canManageCategories]
   );
 
   return (
@@ -169,13 +175,15 @@ const Category = () => {
             Organize your products into categories
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 transition text-sm font-medium w-full sm:w-auto shadow-sm cursor-pointer"
-        >
-          <Plus size={18} />
-          Add Category
-        </button>
+        {canManageCategories && (
+          <button
+            onClick={openAddModal}
+            className="inline-flex items-center justify-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 transition text-sm font-medium w-full sm:w-auto shadow-sm cursor-pointer"
+          >
+            <Plus size={18} />
+            Add Category
+          </button>
+        )}
       </div>
 
       {/* Search Bar */}

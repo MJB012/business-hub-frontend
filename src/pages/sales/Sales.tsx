@@ -12,8 +12,13 @@ import { ProductEntity } from '../../components/entities/product.entity';
 import { saleService } from '../../services/sale.service';
 import { productService } from '../../services/product.service';
 import { useCurrency } from '../../services/currency.service';
+import { hasPermission } from '../../utils/permissions';
 
 export default function Sales() {
+  const canCreateSale = hasPermission('sales:create');
+  const canEditSale = hasPermission('sales:edit');
+  const canDeleteSale = hasPermission('sales:delete');
+
   const [sales, setSales] = useState<SaleEntity[]>([]);
   const [products, setProducts] = useState<ProductEntity[]>([]);
 
@@ -71,14 +76,22 @@ export default function Sales() {
 
   const todayTotal = useMemo(() => {
     return todaySalesList.reduce(
-      (sum, s) => sum + Number(s.quantity || 1) * Number(s.unit_price || 0),
+      (sum, s) =>
+        sum +
+        (s.total_amount !== undefined && s.total_amount !== ''
+          ? Number(s.total_amount)
+          : Number(s.quantity || 1) * Number(s.unit_price || 0)),
       0
     );
   }, [todaySalesList]);
 
   const grandTotal = useMemo(() => {
     return sales.reduce(
-      (sum, s) => sum + Number(s.quantity || 1) * Number(s.unit_price || 0),
+      (sum, s) =>
+        sum +
+        (s.total_amount !== undefined && s.total_amount !== ''
+          ? Number(s.total_amount)
+          : Number(s.quantity || 1) * Number(s.unit_price || 0)),
       0
     );
   }, [sales]);
@@ -96,7 +109,8 @@ export default function Sales() {
         (s.product_name || '').toLowerCase().includes(term) ||
         (s.customer_name || '').toLowerCase().includes(term) ||
         (s.receipt_no || '').toLowerCase().includes(term) ||
-        (s.payment_method || '').toLowerCase().includes(term);
+        (s.payment_method || '').toLowerCase().includes(term) ||
+        (s.items && s.items.some((it) => (it.product_name || '').toLowerCase().includes(term)));
 
       const matchesDate =
         !dateFilter || (s.date && s.date.startsWith(dateFilter));
@@ -121,15 +135,15 @@ export default function Sales() {
   };
 
   const handleSaleSubmit = async (data: SaleEntity, shouldGenerateInvoice?: boolean) => {
-    const numPrice = Number(data.unit_price || 0);
-    const numQuantity = Number(data.quantity || 1);
-    const total = numQuantity * numPrice;
-
     const payload: Partial<SaleEntity> = {
       ...data,
-      quantity: numQuantity,
-      unit_price: numPrice,
-      total_amount: total,
+      items: data.items,
+      quantity: Number(data.quantity || 1),
+      unit_price: Number(data.unit_price || 0),
+      total_amount:
+        data.total_amount !== undefined && data.total_amount !== ''
+          ? Number(data.total_amount)
+          : Number(data.quantity || 1) * Number(data.unit_price || 0),
     };
 
     const targetId = selectedSale?._id || selectedSale?.id;
@@ -205,32 +219,65 @@ export default function Sales() {
       {
         accessorKey: 'product_name',
         header: 'Product Name',
-        cell: ({ row }) => (
-          <div>
-            <span className="font-semibold text-gray-900 block leading-snug">
-              {row.original.product_name}
-            </span>
-            {row.original.receipt_no && (
-              <span className="text-[11px] text-gray-400 font-mono">
-                {row.original.receipt_no}
-              </span>
-            )}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const items = row.original.items || [];
+          const hasMultiple = items.length > 1;
+
+          return (
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-gray-900 block leading-snug">
+                  {hasMultiple ? items[0].product_name : row.original.product_name}
+                </span>
+                {hasMultiple && (
+                  <span
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200"
+                    title={items.map((it) => `${it.quantity}x ${it.product_name}`).join(', ')}
+                  >
+                    +{items.length - 1} more
+                  </span>
+                )}
+              </div>
+              {row.original.receipt_no && (
+                <span className="text-[11px] text-gray-400 font-mono">
+                  {row.original.receipt_no}
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'quantity',
         header: 'Quantity',
-        cell: ({ row }) => (
-          <span className="text-sm text-gray-700">
-            {row.original.quantity}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const items = row.original.items || [];
+          const hasMultiple = items.length > 1;
+          return (
+            <div className="text-sm text-gray-700">
+              <span className="font-medium">{row.original.quantity}</span>
+              {hasMultiple && (
+                <span className="text-[11px] text-gray-400 block">
+                  {items.length} products
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'unit_price',
         header: 'Unit Price',
         cell: ({ row }) => {
+          const items = row.original.items || [];
+          if (items.length > 1) {
+            return (
+              <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded">
+                Multi-product
+              </span>
+            );
+          }
+
           const p = Number(row.original.unit_price || 0);
           const orig = Number(row.original.original_price || 0);
           const discount = Number(row.original.discount || 0);
@@ -262,7 +309,10 @@ export default function Sales() {
         cell: ({ row }) => {
           const qty = Number(row.original.quantity || 1);
           const price = Number(row.original.unit_price || 0);
-          const total = row.original.total_amount ? Number(row.original.total_amount) : qty * price;
+          const total =
+            row.original.total_amount !== undefined && row.original.total_amount !== ''
+              ? Number(row.original.total_amount)
+              : qty * price;
           return (
             <span className="text-sm font-semibold text-gray-900">
               {currencySymbol}{total.toFixed(2)}
@@ -307,27 +357,31 @@ export default function Sales() {
             >
               <FileText size={16} />
             </button>
-            <button
-              onClick={() => openEditModal(row.original)}
-              className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-              title="Edit sale"
-              aria-label="Edit sale"
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              onClick={() => handleDeleteClick(row.original)}
-              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-              title="Delete sale"
-              aria-label="Delete sale"
-            >
-              <Trash2 size={16} />
-            </button>
+            {canEditSale && (
+              <button
+                onClick={() => openEditModal(row.original)}
+                className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                title="Edit sale"
+                aria-label="Edit sale"
+              >
+                <Pencil size={16} />
+              </button>
+            )}
+            {canDeleteSale && (
+              <button
+                onClick={() => handleDeleteClick(row.original)}
+                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                title="Delete sale"
+                aria-label="Delete sale"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         ),
       },
     ],
-    [currencySymbol]
+    [currencySymbol, canEditSale, canDeleteSale]
   );
 
   return (
@@ -343,13 +397,15 @@ export default function Sales() {
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 bg-black text-white hover:bg-gray-800 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-xs cursor-pointer w-full sm:w-auto"
-        >
-          <Plus size={18} />
-          <span>Record Sale</span>
-        </button>
+        {canCreateSale && (
+          <button
+            onClick={openAddModal}
+            className="inline-flex items-center justify-center gap-2 bg-black text-white hover:bg-gray-800 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-xs cursor-pointer w-full sm:w-auto"
+          >
+            <Plus size={18} />
+            <span>Record Sale</span>
+          </button>
+        )}
       </div>
 
       {/* Top Stat Cards */}

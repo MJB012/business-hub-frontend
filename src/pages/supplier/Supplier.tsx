@@ -10,8 +10,10 @@ import AddSupplierModal from "../../components/add-supplier-modal/AddSupplierMod
 import DeleteModal from "../../components/delete-modal/DeleteModal";
 import { SupplierEntity } from "../../components/entities/supplier.entity";
 import { supplierService } from "../../services/supplier.service";
+import { hasPermission } from "../../utils/permissions";
 
 export default function SupplierManagement() {
+  const canManageSuppliers = hasPermission('suppliers:manage');
   const [searchTerm, setSearchTerm] = useState("");
   const [suppliersList, setSuppliersList] = useState<SupplierEntity[]>([]);
 
@@ -177,30 +179,34 @@ export default function SupplierManagement() {
           </span>
         ),
       },
-      {
-        header: "Actions",
-        id: "actions",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <button
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-              onClick={() => openEditModal(row.original)}
-              aria-label="Edit supplier"
-            >
-              <Pencil className="w-4 h-4 text-gray-600" />
-            </button>
-            <button
-              className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-              onClick={() => handleDeleteSupplier(row.original)}
-              aria-label="Delete supplier"
-            >
-              <Trash2 className="w-4 h-4 text-red-500" />
-            </button>
-          </div>
-        ),
-      },
+      ...(canManageSuppliers
+        ? [
+            {
+              header: "Actions",
+              id: "actions",
+              cell: ({ row }: { row: { original: SupplierEntity } }) => (
+                <div className="flex items-center gap-2">
+                  <button
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                    onClick={() => openEditModal(row.original)}
+                    aria-label="Edit supplier"
+                  >
+                    <Pencil className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button
+                    className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    onClick={() => handleDeleteSupplier(row.original)}
+                    aria-label="Delete supplier"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              ),
+            },
+          ]
+        : []),
     ],
-    []
+    [canManageSuppliers]
   );
 
   // Stats
@@ -223,13 +229,15 @@ export default function SupplierManagement() {
             Manage your suppliers and vendors
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 transition text-sm font-medium w-full sm:w-auto shadow-sm cursor-pointer"
-        >
-          <Truck className="w-4 h-4" />
-          Add Supplier
-        </button>
+        {canManageSuppliers && (
+          <button
+            onClick={openAddModal}
+            className="inline-flex items-center justify-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 transition text-sm font-medium w-full sm:w-auto shadow-sm cursor-pointer"
+          >
+            <Truck className="w-4 h-4" />
+            Add Supplier
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}

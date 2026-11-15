@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { RouteNames } from './RouteNames';
 import Layout from '../components/layout/Layout';
+import ProtectedRoute from '../components/protected-route/ProtectedRoute';
 import Dashboard from '../pages/dashboard/Dashboard';
 import Category from '../pages/category/Category';
 import Supplier from '../pages/supplier/Supplier';
@@ -24,6 +25,7 @@ import Inventory from '../pages/inventory/Inventory';
 import Sales from '../pages/sales/Sales';
 import Expenses from '../pages/expenses/Expenses';
 import Reports from '../pages/reports/Reports';
+import Team from '../pages/team/Team';
 import Settings from '../pages/settings/Settings';
 import SuperAdminDashboard from '../pages/super-admin/SuperAdminDashboard';
 import Login from '../pages/login/Login';
@@ -41,10 +43,12 @@ export interface AppRoute {
   element: ReactNode;
   showInSidebar?: boolean;
   superAdminOnly?: boolean;
+  requiredPermissions?: string[];
+  allowedRoles?: string[];
 }
 
 /**
- * Sidebar navigation routes matching exact design
+ * Sidebar navigation routes matching exact design and RBAC rules
  */
 export const sidebarRoutes: AppRoute[] = [
   {
@@ -60,6 +64,7 @@ export const sidebarRoutes: AppRoute[] = [
     icon: <Folder size={18} strokeWidth={2} />,
     element: <Category />,
     showInSidebar: true,
+    requiredPermissions: ['categories:manage'],
   },
   {
     path: RouteNames.SUPPLIERS,
@@ -67,6 +72,7 @@ export const sidebarRoutes: AppRoute[] = [
     icon: <Truck size={18} strokeWidth={2} />,
     element: <Supplier />,
     showInSidebar: true,
+    requiredPermissions: ['suppliers:manage'],
   },
   {
     path: RouteNames.INVENTORY,
@@ -74,6 +80,7 @@ export const sidebarRoutes: AppRoute[] = [
     icon: <Box size={18} strokeWidth={2} />,
     element: <Inventory />,
     showInSidebar: true,
+    requiredPermissions: ['inventory:view', 'inventory:manage'],
   },
   {
     path: RouteNames.SALES,
@@ -81,6 +88,7 @@ export const sidebarRoutes: AppRoute[] = [
     icon: <DollarSign size={18} strokeWidth={2} />,
     element: <Sales />,
     showInSidebar: true,
+    requiredPermissions: ['sales:view', 'sales:create'],
   },
   {
     path: RouteNames.EXPENSES,
@@ -88,6 +96,7 @@ export const sidebarRoutes: AppRoute[] = [
     icon: <Receipt size={18} strokeWidth={2} />,
     element: <Expenses />,
     showInSidebar: true,
+    requiredPermissions: ['expenses:view', 'expenses:manage'],
   },
   {
     path: RouteNames.REPORTS,
@@ -95,18 +104,16 @@ export const sidebarRoutes: AppRoute[] = [
     icon: <BarChart3 size={18} strokeWidth={2} />,
     element: <Reports />,
     showInSidebar: true,
+    requiredPermissions: ['reports:view'],
   },
   {
     path: RouteNames.TEAM,
     label: 'Team',
     icon: <Users size={18} strokeWidth={2} />,
-    element: (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold">Team</h1>
-        <p className="text-gray-500 mt-1">Manage team members, roles, and permissions</p>
-      </div>
-    ),
-    showInSidebar: false,
+    element: <Team />,
+    showInSidebar: true,
+    requiredPermissions: ['team:manage'],
+    allowedRoles: ['admin', 'manager', 'super_admin'],
   },
   {
     path: RouteNames.SETTINGS,
@@ -114,6 +121,7 @@ export const sidebarRoutes: AppRoute[] = [
     icon: <SettingsIcon size={18} strokeWidth={2} />,
     element: <Settings />,
     showInSidebar: true,
+    allowedRoles: ['admin', 'manager', 'super_admin'],
   },
   {
     path: RouteNames.SUPER_ADMIN,
@@ -203,7 +211,19 @@ export const AppRoutes: React.FC = () => {
       {/* Authenticated routes wrapped with Layout containing Sidebar */}
       <Route element={<Layout />}>
         {sidebarRoutes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
+          <Route
+            key={route.path}
+            path={route.path}
+            element={
+              <ProtectedRoute
+                requiredPermissions={route.requiredPermissions}
+                allowedRoles={route.allowedRoles}
+                superAdminOnly={route.superAdminOnly}
+              >
+                {route.element}
+              </ProtectedRoute>
+            }
+          />
         ))}
       </Route>
 

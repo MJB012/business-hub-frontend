@@ -16,6 +16,11 @@ import {
 import { sidebarRoutes } from '../../routes/routes';
 import { RouteNames } from '../../routes/RouteNames';
 import { UserRoleEnum } from '../../enums/UserRoleEnum';
+import {
+  hasAnyPermission,
+  isAdminOrSuperAdmin,
+  getStoredUser,
+} from '../../utils/permissions';
 
 export interface UserProfile {
   name: string;
@@ -176,12 +181,39 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
     },
   ];
 
-  // Only render routes configured to show in sidebar
+  // Only render routes configured to show in sidebar and permitted for current user
+  const rawStoredUser = getStoredUser();
+  const activeRole = (currentUser.role || rawStoredUser?.role || '').toLowerCase().trim();
+  const isAdmin = isAdminOrSuperAdmin(activeRole);
+
   const visibleRoutes = isSuperAdmin
     ? superAdminRoutes
     : sidebarRoutes.filter((route) => {
         if (route.showInSidebar === false) return false;
         if (route.superAdminOnly) return false;
+        if (isAdmin) return true;
+
+        // Check role requirement (e.g. settings)
+        if (route.allowedRoles && route.allowedRoles.length > 0) {
+          const roleMatch = route.allowedRoles.some(
+            (r) => r.toLowerCase().trim() === activeRole
+          );
+          if (!roleMatch) {
+            if (
+              route.requiredPermissions &&
+              hasAnyPermission(route.requiredPermissions, rawStoredUser)
+            ) {
+              return true;
+            }
+            return false;
+          }
+        }
+
+        // Check required permissions
+        if (route.requiredPermissions && route.requiredPermissions.length > 0) {
+          return hasAnyPermission(route.requiredPermissions, rawStoredUser);
+        }
+
         return true;
       });
 

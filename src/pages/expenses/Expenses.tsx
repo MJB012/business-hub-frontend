@@ -17,8 +17,12 @@ import { ExpenseEntity } from '../../components/entities/expense.entity';
 import { expenseService } from '../../services/expense.service';
 import { categoryService } from '../../services/category.service';
 import { useCurrency } from '../../services/currency.service';
+import { hasPermission } from '../../utils/permissions';
 
 export default function Expenses() {
+  const canManageExpenses = hasPermission('expenses:manage');
+  const canDeleteExpenses = hasPermission('expenses:delete');
+
   const [expenses, setExpenses] = useState<ExpenseEntity[]>([]);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -332,17 +336,19 @@ export default function Expenses() {
           </button>
 
           {/* + Add expense Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setExpenseToEdit(null);
-              setIsAddModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
-          >
-            <Plus size={15} />
-            <span>Add expense</span>
-          </button>
+          {canManageExpenses && (
+            <button
+              type="button"
+              onClick={() => {
+                setExpenseToEdit(null);
+                setIsAddModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>Add expense</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -562,17 +568,19 @@ export default function Expenses() {
                     <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
                       Record your first business cost to start tracking spending and category trends.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setExpenseToEdit(null);
-                        setIsAddModalOpen(true);
-                      }}
-                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
-                    >
-                      <Plus size={14} />
-                      <span>Add first expense</span>
-                    </button>
+                    {canManageExpenses && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpenseToEdit(null);
+                          setIsAddModalOpen(true);
+                        }}
+                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+                      >
+                        <Plus size={14} />
+                        <span>Add first expense</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -626,28 +634,32 @@ export default function Expenses() {
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExpenseToEdit(expense);
-                              setIsAddModalOpen(true);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-                            title="Edit expense"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExpenseToDelete(expense);
-                              setIsDeleteModalOpen(true);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                            title="Delete expense"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {canManageExpenses && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpenseToEdit(expense);
+                                setIsAddModalOpen(true);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                              title="Edit expense"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {canDeleteExpenses && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpenseToDelete(expense);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                              title="Delete expense"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -81,16 +81,54 @@ export default function InvoiceModal({
   if (!isOpen || !sale) return null;
 
   const currencySymbol = getCurrencySymbol(business.currency);
-  const qty = Number(sale.quantity || 1);
-  const unitPrice = Number(sale.unit_price || 0);
-  const origPrice = Number(
-    sale.original_price !== undefined && sale.original_price !== '' && Number(sale.original_price) > 0
-      ? sale.original_price
-      : unitPrice
-  );
 
-  const subtotal = origPrice * qty;
-  const netTotal = sale.total_amount ? Number(sale.total_amount) : qty * unitPrice;
+  // Normalize items list (supports multi-item sales and legacy single-product sales)
+  const items = useMemo(() => {
+    if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
+      return sale.items.map((it) => {
+        const q = Number(it.quantity || 1);
+        const p = Number(it.unit_price || 0);
+        const orig = Number(it.original_price !== undefined && it.original_price !== '' && Number(it.original_price) > 0 ? it.original_price : p);
+        const lineTotal = it.total_amount ? Number(it.total_amount) : q * p;
+        const lineDiscount = it.discount ? Number(it.discount) : Math.max(0, (orig - p) * q);
+        return {
+          product_name: it.product_name,
+          quantity: q,
+          unit_price: p,
+          original_price: orig,
+          total_amount: lineTotal,
+          discount: lineDiscount,
+        };
+      });
+    }
+
+    const q = Number(sale.quantity || 1);
+    const p = Number(sale.unit_price || 0);
+    const orig = Number(
+      sale.original_price !== undefined && sale.original_price !== '' && Number(sale.original_price) > 0
+        ? sale.original_price
+        : p
+    );
+    const lineTotal = sale.total_amount ? Number(sale.total_amount) : q * p;
+    const lineDiscount =
+      sale.discount !== undefined && sale.discount !== '' && Number(sale.discount) > 0
+        ? Number(sale.discount)
+        : Math.max(0, (orig - p) * q);
+
+    return [
+      {
+        product_name: sale.product_name || 'Custom Product / Service',
+        quantity: q,
+        unit_price: p,
+        original_price: orig,
+        total_amount: lineTotal,
+        discount: lineDiscount,
+      },
+    ];
+  }, [sale]);
+
+  const subtotal = items.reduce((sum, it) => sum + it.original_price * it.quantity, 0);
+  const netTotal = sale.total_amount ? Number(sale.total_amount) : items.reduce((sum, it) => sum + it.total_amount, 0);
   const discountAmount =
     sale.discount !== undefined && sale.discount !== '' && Number(sale.discount) > 0
       ? Number(sale.discount)
@@ -231,32 +269,41 @@ export default function InvoiceModal({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                <tr>
-                  <td className="py-3 text-gray-900 font-medium">
-                    <div>{sale.product_name}</div>
-                    {discountAmount > 0 && (
-                      <span className="inline-block text-[11px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5">
-                        Discount applied: -{currencySymbol}{(origPrice - unitPrice).toFixed(2)}/unit
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 text-center text-gray-700">{qty}</td>
-                  <td className="py-3 text-right text-gray-500">
-                    {discountAmount > 0 ? (
-                      <span className="line-through text-gray-400">
-                        {currencySymbol}{origPrice.toFixed(2)}
-                      </span>
-                    ) : (
-                      `${currencySymbol}${origPrice.toFixed(2)}`
-                    )}
-                  </td>
-                  <td className="py-3 text-right text-gray-900 font-medium">
-                    {currencySymbol}{unitPrice.toFixed(2)}
-                  </td>
-                  <td className="py-3 text-right text-gray-900 font-bold">
-                    {currencySymbol}{netTotal.toFixed(2)}
-                  </td>
-                </tr>
+                {items.map((item, idx) => {
+                  const hasDiscount = item.original_price > item.unit_price;
+                  return (
+                    <tr key={idx}>
+                      <td className="py-3 text-gray-900 font-medium">
+                        <div>{item.product_name}</div>
+                        {hasDiscount && (
+                          <span className="inline-block text-[11px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5">
+                            Discount applied: -{currencySymbol}
+                            {(item.original_price - item.unit_price).toFixed(2)}/unit
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 text-center text-gray-700">{item.quantity}</td>
+                      <td className="py-3 text-right text-gray-500">
+                        {hasDiscount ? (
+                          <span className="line-through text-gray-400">
+                            {currencySymbol}
+                            {item.original_price.toFixed(2)}
+                          </span>
+                        ) : (
+                          `${currencySymbol}${item.original_price.toFixed(2)}`
+                        )}
+                      </td>
+                      <td className="py-3 text-right text-gray-900 font-medium">
+                        {currencySymbol}
+                        {item.unit_price.toFixed(2)}
+                      </td>
+                      <td className="py-3 text-right text-gray-900 font-bold">
+                        {currencySymbol}
+                        {item.total_amount.toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
