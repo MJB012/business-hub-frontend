@@ -76,7 +76,10 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
               ? 'Super Admin'
               : parsed.role || DEFAULT_USER.role,
           email: parsed.email || DEFAULT_USER.email,
-          logo: shopParsed?.shop_logo !== undefined ? shopParsed.shop_logo : (shopParsed?.shopLogo || null),
+          logo:
+            shopParsed?.shop_logo !== undefined
+              ? shopParsed.shop_logo
+              : (shopParsed?.shopLogo || parsed.business?.logo || parsed.business_logo || null),
         };
       }
     } catch {
@@ -110,7 +113,10 @@ const Sidebar: FC<SidebarProps> = ({ onClose, user: propUser }) => {
               parsed?.business_name ||
               parsed?.businessName ||
               prev.businessName,
-            logo: shopParsed?.shop_logo !== undefined ? shopParsed.shop_logo : (shopParsed?.shopLogo ?? prev.logo),
+            logo:
+              shopParsed?.shop_logo !== undefined
+                ? shopParsed.shop_logo
+                : (shopParsed?.shopLogo ?? parsed?.business?.logo ?? parsed?.business_logo ?? prev.logo),
           }));
         }
       } catch {
